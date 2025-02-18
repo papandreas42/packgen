@@ -1,0 +1,19 @@
+[project]
+name = "packgen"
+version = "0.1.0"
+description = "Particle packing generator"
+readme = "README.md"
+authors = [
+    { name = "Fábio P. Fortkamp", email = "fabio@fabiofortkamp.com" },
+    { name = "Andrea R. Insinga", email = "aroin@dtu.dk" },
+    { name = "Andreas Papanikolaou", email = "" }
+]
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+packgen = "packgen:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
