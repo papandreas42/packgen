@@ -4,6 +4,7 @@ import bpy
 import random
 import array as arr
 import numpy as np
+import warnings
 
 # 1) Select "Scripting" workspace
 # 2) In the "Text Editor" window, open this script and click "Run Script"
@@ -44,20 +45,30 @@ def number_ratio(mass_ratio, densities, heights, radii, total_mass):
     mass_percentages = [x / sum(mass_ratio) for x in mass_ratio]
 
     # What is mass, volume and number of each type of particle in the mixture?
-    mass_components = [x * total_mass for x in mass_percentages]
+    mass_components = np.array([x * total_mass for x in mass_percentages])
     volume_components = [x / y if y>0 else 0 for x, y in zip(mass_components, densities)]
 
     # must round up or down to the nearest integer
-    number_components = [int(np.ceil(x / y)) for x, y in zip(volume_components, particle_volumes)]
+    number_components = [x / y for x, y in zip(volume_components, particle_volumes)]
+    number_components_rounded = [int(x) for x in np.ceil(number_components)]
+    number_percentages_rounded = [
+        x / sum(number_components_rounded) for x in number_components_rounded
+    ]
 
-    number_percentages = [x / sum(number_components) for x in number_components]
+    # Rounding error in the mass fraction after rounding up the number of particles
+    mass_components_rounded = [n * v * rho for n, v, rho in zip(number_components_rounded, particle_volumes, densities)]
+    percentile_error = (mass_components_rounded - mass_components) / mass_components
 
-    return number_percentages, number_components
+    for error in percentile_error:
+        if error > 1e-3:
+            warnings.warn("The rounding error in the mass fraction is greater than 0.1%") 
+
+    return number_percentages_rounded, number_components_rounded
 
 CombinationsMassFractions = arr.array(
-    "d", [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0])
+    "d", [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 3.0])
 CombinationDensities = arr.array(
-    "d", [0.0, 0.0, 0.0, 0.0, 0.2, 0.0, 0.0, 0.0, 3.2])
+    "d", [0.0, 0.0, 0.0, 0.0, 3.2, 0.0, 0.0, 0.0, 3.2])
 TotalMass = 500.0
 
 CombinationsFractions, CombinationsPopulations = number_ratio(CombinationsMassFractions, CombinationDensities, CombinationsHeights, CombinationsRadii, TotalMass)
