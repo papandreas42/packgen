@@ -6,6 +6,7 @@ import array as arr
 import numpy as np
 import warnings
 import os
+import json
 
 # 1) Select "Scripting" workspace
 # 2) In the "Text Editor" window, open this script and click "Run Script"
@@ -16,12 +17,20 @@ import os
 GlobalScaleFactor = 2.5
 # The two arrays must be the same number of elements
 # (they represent COMBINATIONS of radius and height)
-CombinationsRadii = arr.array(
-    "d", [0.0500, 0.0750, 0.1000, 0.1250, 0.1500, 0.1750, 0.2000, 0.2250, 0.2500]
-)
-CombinationsHeights = arr.array(
-    "d", [0.0500, 0.0750, 0.1000, 0.1250, 0.1500, 0.1750, 0.2000, 0.2250, 0.2500]
-)
+
+# Load configuration from JSON file
+json_file_path = os.path.join(r"C:\Users\antre\Desktop\config_example.json")
+
+# Load JSON data
+with open(json_file_path, "r") as file:
+    data = json.load(file)
+
+# Extract parameters
+CombinationsRadii = data.get("radii")
+CombinationsHeights = data.get("heights")
+CombinationDensities = data.get("densities")
+TotalMass = data.get("totalMass")
+CombinationsMassFractions = data.get("massFractions")
 
 
 # Mass fractions
@@ -66,11 +75,6 @@ def number_ratio(mass_ratio, densities, heights, radii, total_mass):
 
     return number_percentages_rounded, number_components_rounded
 
-CombinationsMassFractions = arr.array(
-    "d", [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 3.0])
-CombinationDensities = arr.array(
-    "d", [0.0, 0.0, 0.0, 0.0, 3.2, 0.0, 0.0, 0.0, 3.2])
-TotalMass = 500.0
 
 CombinationsFractions, CombinationsPopulations = number_ratio(CombinationsMassFractions, CombinationDensities, CombinationsHeights, CombinationsRadii, TotalMass)
 CombinationsFractions = arr.array("d", CombinationsFractions)
@@ -206,7 +210,7 @@ def stop_playback(scene):
         bpy.ops.screen.animation_cancel(restore_frame=False)
         bpy.ops.object.delete(use_global=False)
 
-        stl_path = os.path.join(os.path.expanduser("~"), "stl_path.stl")
+        stl_path = os.path.join(os.path.expanduser("~"), data.get("stlFilename"))
         print("Exporting to", stl_path)
 
         bpy.ops.wm.stl_export(filepath=stl_path)
