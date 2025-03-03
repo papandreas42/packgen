@@ -3,6 +3,7 @@
 import bpy
 import random
 import array as arr
+import numpy as np
 
 # 1) Select "Scripting" workspace
 # 2) In the "Text Editor" window, open this script and click "Run Script"
@@ -19,7 +20,49 @@ CombinationsRadii = arr.array(
 CombinationsHeights = arr.array(
     "d", [0.0500, 0.0750, 0.1000, 0.1250, 0.1500, 0.1750, 0.2000, 0.2250, 0.2500]
 )
-CombinationsFractions = arr.array("d", [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0])
+
+
+# Mass fractions
+def number_ratio(mass_ratio, densities, heights, radii, total_mass):
+    """
+    Calculate the number ratio of the materials in the mixture given the mass ratio, densities, volumes and total mass of the components.
+    """
+
+    def polygon_volume(sides, radii, heights):
+        # https://en.wikipedia.org/wiki/Regular_polygon
+
+        sides = np.array(sides)
+        radii = np.array(radii)
+        heights = np.array(heights)
+
+        return 1 / 2 * np.square(radii) * np.sin(2 * np.pi / sides) * heights
+
+    # Calculate the volumes of each particle
+    particle_volumes = polygon_volume([6] * len(radii), radii, heights)
+
+    # What percentage of the total mass is taken by each type of particle in the mixture?
+    mass_percentages = [x / sum(mass_ratio) for x in mass_ratio]
+
+    # What is mass, volume and number of each type of particle in the mixture?
+    mass_components = [x * total_mass for x in mass_percentages]
+    volume_components = [x / y if y>0 else 0 for x, y in zip(mass_components, densities)]
+
+    # must round up or down to the nearest integer
+    number_components = [int(np.ceil(x / y)) for x, y in zip(volume_components, particle_volumes)]
+
+    number_percentages = [x / sum(number_components) for x in number_components]
+
+    return number_percentages, number_components
+
+CombinationsMassFractions = arr.array(
+    "d", [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0])
+CombinationDensities = arr.array(
+    "d", [0.0, 0.0, 0.0, 0.0, 0.2, 0.0, 0.0, 0.0, 3.2])
+TotalMass = 500.0
+
+CombinationsFractions, CombinationsPopulations = number_ratio(CombinationsMassFractions, CombinationDensities, CombinationsHeights, CombinationsRadii, TotalMass)
+CombinationsFractions = arr.array("d", CombinationsFractions)
+# CombinationsFractions = arr.array("d", [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0])
 CombinationsCumSum = arr.array("d", [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 CombinationRed = arr.array("d", [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0])
 CombinationGreen = arr.array("d", [0.0, 0.0, 0.0, 0.0, 0.6, 0.0, 0.0, 0.0, 0.8])
@@ -36,10 +79,11 @@ for i in range(len(CombinationsFractions)):
     CumulativeSum = CumulativeSum + CombinationsFractions[i]
     CombinationsCumSum[i] = CumulativeSum
 
-
+# Container box
 def create_cube_without_top_face(thesize):
+    scale_z = 3
     bpy.ops.mesh.primitive_cube_add(
-        size=thesize, enter_editmode=False, location=(0, 0, 0)
+        size=thesize, enter_editmode=False, location=(0, 0, 0), scale=(1, 1, scale_z)
     )
     cube = bpy.context.active_object
 
@@ -72,7 +116,9 @@ def add_passive_rigidbody(cube):
 # Customize the following parameters for your array of cubes
 num_cubes_x = 2  # Number of cubes along the X axis
 num_cubes_y = 2  # Number of cubes along the Y axis
-num_cubes_z = 50  # Number of   cubes along the Z axis
+num_cubes_z = 50  # Max number of   cubes along the Z axis
+total_number = sum(CombinationsPopulations)
+
 distance = 2.5  # Distance between the cubes
 mu = 0  # Mean of the log-normal distribution
 sigma = 0.1  # Standard deviation of the log-normal distribution
@@ -84,6 +130,7 @@ bpy.ops.object.select_by_type(type="MESH")
 bpy.ops.object.delete()
 
 # Create an array of cubes with random sizes determined by the log-normal distribution
+count = 0
 for x in range(num_cubes_x):
     for y in range(num_cubes_y):
         for z in range(num_cubes_z):
@@ -131,6 +178,9 @@ for x in range(num_cubes_x):
             mat.specular_intensity = 0
 
             cube.active_material = mat
+
+            if count == total_number:
+                break
 
 thickness = -0.2
 
