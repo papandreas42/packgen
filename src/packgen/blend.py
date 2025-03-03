@@ -5,6 +5,7 @@ import random
 import array as arr
 import numpy as np
 import warnings
+import os
 
 # 1) Select "Scripting" workspace
 # 2) In the "Text Editor" window, open this script and click "Run Script"
@@ -199,3 +200,18 @@ cube = create_cube_without_top_face((num_cubes_x) * distance)
 add_solidify_modifier(cube, thickness)
 
 add_passive_rigidbody(cube)
+
+def stop_playback(scene):
+    if scene.frame_current == 200:
+        bpy.ops.screen.animation_cancel(restore_frame=False)
+        bpy.ops.object.delete(use_global=False)
+
+        stl_path = os.path.join(os.path.expanduser("~"), "stl_path.stl")
+        print("Exporting to", stl_path)
+
+        bpy.ops.wm.stl_export(filepath=stl_path)
+
+
+bpy.app.handlers.frame_change_pre.append(stop_playback)
+
+bpy.ops.screen.animation_play()
